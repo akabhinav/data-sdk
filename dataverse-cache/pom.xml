@@ -17,10 +17,10 @@
     <name>DataVerse SDK - Cache Modules</name>
     <description>Cache provider implementations</description>
 
-    <!-- Future modules:
     <modules>
         <module>dataverse-cache-caffeine</module>
+        <!-- Future modules:
         <module>dataverse-cache-redis</module>
+        -->
     </modules>
-    -->
 </project>
