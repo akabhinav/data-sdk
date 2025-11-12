@@ -6,6 +6,7 @@ import io.dataverse.api.Repository;
 import io.dataverse.core.audit.*;
 import io.dataverse.core.cache.*;
 import io.dataverse.core.encryption.*;
+import io.dataverse.core.specification.Specification;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -255,6 +256,33 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
   @Override
   public List<T> findAll() {
     return doFindAll();
+  }
+
+  @Override
+  public List<T> findAll(Specification<T> spec) {
+    if (spec == null) {
+      throw new IllegalArgumentException("Specification must not be null");
+    }
+    // Apply specification to query builder and execute
+    return spec.apply(query()).execute();
+  }
+
+  @Override
+  public Optional<T> findOne(Specification<T> spec) {
+    if (spec == null) {
+      throw new IllegalArgumentException("Specification must not be null");
+    }
+    List<T> results = spec.apply(query()).limit(1).execute();
+    return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+  }
+
+  @Override
+  public long count(Specification<T> spec) {
+    if (spec == null) {
+      throw new IllegalArgumentException("Specification must not be null");
+    }
+    // Apply specification and count results
+    return spec.apply(query()).execute().size();
   }
 
   @Override

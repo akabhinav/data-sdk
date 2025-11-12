@@ -1,6 +1,7 @@
 package io.dataverse.api;
 
 import io.dataverse.core.audit.AuditRepository;
+import io.dataverse.core.specification.Specification;
 
 import java.io.Serializable;
 import java.util.List;
@@ -95,6 +96,42 @@ public interface Repository<T extends Entity<ID>, ID extends Serializable> {
    * @return all entities, never {@code null}
    */
   List<T> findAll();
+
+  /**
+   * Returns all entities matching the given specification.
+   *
+   * <p>Uses the Specification pattern for type-safe, composable query building.
+   *
+   * <p>Example usage:
+   * <pre>{@code
+   * Specification<User> spec = Specification.<User>isTrue("active")
+   *     .and(Specification.greaterThan("age", 18));
+   * List<User> activeAdults = repository.findAll(spec);
+   * }</pre>
+   *
+   * @param spec the specification to apply, must not be {@code null}
+   * @return all entities matching the specification, never {@code null}
+   * @throws IllegalArgumentException if spec is {@code null}
+   */
+  List<T> findAll(Specification<T> spec);
+
+  /**
+   * Returns a single entity matching the given specification.
+   *
+   * @param spec the specification to apply, must not be {@code null}
+   * @return an Optional containing the entity if found, empty otherwise
+   * @throws IllegalArgumentException if spec is {@code null}
+   */
+  Optional<T> findOne(Specification<T> spec);
+
+  /**
+   * Returns the count of entities matching the given specification.
+   *
+   * @param spec the specification to apply, must not be {@code null}
+   * @return the count of matching entities
+   * @throws IllegalArgumentException if spec is {@code null}
+   */
+  long count(Specification<T> spec);
 
   /**
    * Checks whether an entity with the given identifier exists.
