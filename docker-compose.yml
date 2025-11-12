@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Primary relational database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dataverse-postgres
+    environment:
+      POSTGRES_DB: dataverse_test
+      POSTGRES_USER: dataverse
+      POSTGRES_PASSWORD: dataverse123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataverse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataverse-network
+
+  # MongoDB - NoSQL document database
+  mongodb:
+    image: mongo:7
+    container_name: dataverse-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: dataverse
+      MONGO_INITDB_ROOT_PASSWORD: dataverse123
+      MONGO_INITDB_DATABASE: dataverse_test
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./init-scripts/mongodb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataverse-network
+
+  # Redis - In-memory cache
+  redis:
+    image: redis:7-alpine
+    container_name: dataverse-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataverse-network
+
+  # PostgreSQL Replica 1 (for Read Replicas feature testing)
+  postgres-replica1:
+    image: postgres:15-alpine
+    container_name: dataverse-postgres-replica1
+    environment:
+      POSTGRES_DB: dataverse_test
+      POSTGRES_USER: dataverse
+      POSTGRES_PASSWORD: dataverse123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_replica1_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataverse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataverse-network
+
+  # PostgreSQL Replica 2 (for Read Replicas feature testing)
+  postgres-replica2:
+    image: postgres:15-alpine
+    container_name: dataverse-postgres-replica2
+    environment:
+      POSTGRES_DB: dataverse_test
+      POSTGRES_USER: dataverse
+      POSTGRES_PASSWORD: dataverse123
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_replica2_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataverse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataverse-network
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_replica1_data:
+    driver: local
+  postgres_replica2_data:
+    driver: local
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  dataverse-network:
+    driver: bridge
