@@ -11,18 +11,13 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>dataverse-examples</artifactId>
+    <artifactId>dataverse-serialization</artifactId>
     <packaging>pom</packaging>
 
-    <name>DataVerse SDK - Examples</name>
-    <description>Example applications demonstrating DataVerse SDK usage</description>
+    <name>DataVerse SDK - Serialization Modules</name>
+    <description>Serialization provider implementations</description>
 
     <modules>
-        <module>example-basic</module>
-        <!-- Future modules:
-        <module>example-multi-source</module>
-        <module>example-spring-boot</module>
-        <module>example-standalone</module>
-        -->
+        <module>dataverse-serialization-jackson</module>
     </modules>
 </project>

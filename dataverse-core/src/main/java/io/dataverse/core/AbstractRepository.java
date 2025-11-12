@@ -1,5 +1,6 @@
 package io.dataverse.core;
 
+import io.dataverse.api.BatchOperations;
 import io.dataverse.api.Entity;
 import io.dataverse.api.Repository;
 import java.io.Serializable;
@@ -176,6 +177,11 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     for (T entity : entities) {
       delete(entity);
     }
+  }
+
+  @Override
+  public BatchOperations<T, ID> batch() {
+    return new DefaultBatchOperations<>(this, virtualThreadExecutor);
   }
 
   // Async Operations using Virtual Threads

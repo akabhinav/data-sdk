@@ -149,6 +149,20 @@ public interface Repository<T extends Entity<ID>, ID extends Serializable> {
   QueryBuilder<T> query();
 
   /**
+   * Creates a batch operations instance for bulk data manipulation.
+   *
+   * @return a new batch operations instance, never {@code null}
+   */
+  BatchOperations<T, ID> batch();
+
+  /**
+   * Creates an aggregation builder for advanced analytics queries.
+   *
+   * @return a new aggregation builder instance, never {@code null}
+   */
+  AggregationBuilder<T> aggregate();
+
+  /**
    * Executes the given native query.
    *
    * <p>Native queries bypass the query builder and execute directly against the underlying

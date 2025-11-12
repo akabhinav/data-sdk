@@ -92,6 +92,15 @@ public interface DataSourceAdapter {
   QueryTranslator getQueryTranslator();
 
   /**
+   * Returns the transaction manager for this adapter.
+   *
+   * <p>Returns {@code null} if the adapter does not support transactions.
+   *
+   * @return the transaction manager, or {@code null} if not supported
+   */
+  io.dataverse.api.TransactionManager getTransactionManager();
+
+  /**
    * Checks if the adapter is healthy and ready to serve requests.
    *
    * @return {@code true} if healthy, {@code false} otherwise

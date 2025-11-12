@@ -28,6 +28,7 @@
         <module>dataverse-core</module>
         <module>dataverse-adapters</module>
         <module>dataverse-cache</module>
+        <module>dataverse-serialization</module>
         <module>dataverse-metrics</module>
         <module>dataverse-spring-boot</module>
         <module>dataverse-test-support</module>
@@ -51,6 +52,7 @@
         <postgresql.version>42.7.1</postgresql.version>
         <elasticsearch.client.version>8.12.0</elasticsearch.client.version>
         <caffeine.version>3.1.8</caffeine.version>
+        <jackson.version>2.16.1</jackson.version>
         <micrometer.version>1.12.2</micrometer.version>
         <spring.boot.version>3.2.2</spring.boot.version>
 
@@ -143,6 +145,28 @@
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
                 <version>${caffeine.version}</version>
+            </dependency>
+
+            <!-- JSON Serialization -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
 
             <!-- Metrics -->
