@@ -133,6 +133,63 @@ public interface QueryBuilder<T> {
 
   // Caching
 
+  // Fetch/Loading Control
+
+  /**
+   * Specifies the fetch strategy for a relationship field.
+   *
+   * <p>Controls when and how related entities are loaded, allowing you to
+   * override default loading behavior and avoid N+1 query problems.
+   *
+   * <p>Example usage:
+   * <pre>{@code
+   * // Eager load orders with users (avoid N+1)
+   * List<User> users = repository.query()
+   *     .where("active").isTrue()
+   *     .fetch("orders", FetchStrategy.EAGER)
+   *     .execute();
+   *
+   * // Lazy load profile (not always needed)
+   * List<User> users = repository.query()
+   *     .where("active").isTrue()
+   *     .fetch("profile", FetchStrategy.LAZY)
+   *     .execute();
+   *
+   * // Nested eager loading
+   * List<User> users = repository.query()
+   *     .fetch("orders", FetchStrategy.EAGER)
+   *     .fetch("orders.items", FetchStrategy.EAGER)
+   *     .execute();
+   * }</pre>
+   *
+   * @param fieldPath the field path (use dot notation for nested: "orders.items")
+   * @param strategy the fetch strategy
+   * @return this query builder
+   */
+  QueryBuilder<T> fetch(String fieldPath, io.dataverse.core.loading.FetchStrategy strategy);
+
+  /**
+   * Eager loads the specified relationship field.
+   *
+   * <p>Shorthand for {@code fetch(fieldPath, FetchStrategy.EAGER)}.
+   *
+   * @param fieldPath the field path to eager load
+   * @return this query builder
+   */
+  QueryBuilder<T> eagerLoad(String fieldPath);
+
+  /**
+   * Lazy loads the specified relationship field.
+   *
+   * <p>Shorthand for {@code fetch(fieldPath, FetchStrategy.LAZY)}.
+   *
+   * @param fieldPath the field path to lazy load
+   * @return this query builder
+   */
+  QueryBuilder<T> lazyLoad(String fieldPath);
+
+  // Caching
+
   /**
    * Enables query result caching with default TTL.
    *
