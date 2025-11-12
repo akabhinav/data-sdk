@@ -131,6 +131,47 @@ public interface QueryBuilder<T> {
    */
   QueryBuilder<T> exclude(String... fieldNames);
 
+  // Caching
+
+  /**
+   * Enables query result caching with default TTL.
+   *
+   * <p>When enabled, the query results will be cached and reused for identical queries
+   * until the cache expires or is invalidated by a write operation.
+   *
+   * <p>The cache is automatically invalidated when:
+   * <ul>
+   *   <li>Any entity of this type is created, updated, or deleted</li>
+   *   <li>The TTL expires</li>
+   * </ul>
+   *
+   * <p>Example usage:
+   * <pre>{@code
+   * // First call - executes query and caches result
+   * List<User> users = repository.query()
+   *     .where("active").isTrue()
+   *     .cached()
+   *     .execute();
+   *
+   * // Second call - returns cached result (instant)
+   * List<User> sameUsers = repository.query()
+   *     .where("active").isTrue()
+   *     .cached()
+   *     .execute();
+   * }</pre>
+   *
+   * @return this query builder
+   */
+  QueryBuilder<T> cached();
+
+  /**
+   * Enables query result caching with custom TTL.
+   *
+   * @param ttl the time-to-live for the cached result
+   * @return this query builder
+   */
+  QueryBuilder<T> cached(java.time.Duration ttl);
+
   // Execution
 
   /**

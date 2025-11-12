@@ -46,6 +46,7 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
   protected final CacheConfig cacheConfig;
   protected final EncryptionProvider encryptionProvider;
   protected final boolean hasEncryptedFields;
+  protected final QueryCache<T> queryCache;
 
   // ThreadLocal to store entity state before operations (for audit trail)
   private final ThreadLocal<T> beforeState = new ThreadLocal<>();
@@ -104,8 +105,12 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
           l1,
           l2
       );
+
+      // Initialize query result cache with same TTL as L1 cache
+      this.queryCache = new QueryCache<>(entityClass.getSimpleName(), cacheConfig.getL1Ttl());
     } else {
       this.cacheProvider = new NoCacheProvider<>();
+      this.queryCache = null;
     }
   }
 
@@ -195,6 +200,11 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     if (cacheConfig.isEnabled() && saved.getId() != null) {
       String cacheKey = cacheKeyGenerator.generateKey(saved.getId());
       cacheProvider.put(cacheKey, saved);
+
+      // Invalidate query cache as data has changed
+      if (queryCache != null) {
+        queryCache.invalidateAll();
+      }
     }
 
     return saved;
@@ -306,6 +316,11 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     if (cacheConfig.isEnabled()) {
       String cacheKey = cacheKeyGenerator.generateKey(id);
       cacheProvider.evict(cacheKey);
+
+      // Invalidate query cache as data has changed
+      if (queryCache != null) {
+        queryCache.invalidateAll();
+      }
     }
   }
 
