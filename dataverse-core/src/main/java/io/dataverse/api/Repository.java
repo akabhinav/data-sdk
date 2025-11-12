@@ -227,6 +227,34 @@ public interface Repository<T extends Entity<ID>, ID extends Serializable> {
   AuditRepository<T> audit();
 
   /**
+   * Creates a native query executor for type-safe native queries.
+   *
+   * <p>Native queries allow executing raw database queries while maintaining type safety
+   * for results. Supports named parameters, result mapping, and pagination.
+   *
+   * <p>Example usage:
+   * <pre>{@code
+   * // Execute native SQL with parameters
+   * List<User> users = repository.nativeQuery(User.class)
+   *     .sql("SELECT * FROM users WHERE status = :status AND age > :age")
+   *     .parameter("status", "ACTIVE")
+   *     .parameter("age", 18)
+   *     .execute();
+   *
+   * // Map to DTO
+   * List<UserSummary> summaries = repository.nativeQuery(UserSummary.class)
+   *     .sql("SELECT id, username, email FROM users WHERE dept = :dept")
+   *     .parameter("dept", "Engineering")
+   *     .execute();
+   * }</pre>
+   *
+   * @param <R> the result type
+   * @param resultClass the class to map results to
+   * @return a native query executor, never {@code null}
+   */
+  <R> io.dataverse.core.query.NativeQueryExecutor<R> nativeQuery(Class<R> resultClass);
+
+  /**
    * Executes the given native query.
    *
    * <p>Native queries bypass the query builder and execute directly against the underlying
