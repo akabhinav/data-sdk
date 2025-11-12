@@ -5,6 +5,7 @@ import io.dataverse.api.Entity;
 import io.dataverse.api.Repository;
 import io.dataverse.core.audit.*;
 import io.dataverse.core.cache.*;
+import io.dataverse.core.encryption.*;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -42,6 +43,8 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
   protected final CacheProvider<String, T> cacheProvider;
   protected final CacheKeyGenerator cacheKeyGenerator;
   protected final CacheConfig cacheConfig;
+  protected final EncryptionProvider encryptionProvider;
+  protected final boolean hasEncryptedFields;
 
   // ThreadLocal to store entity state before operations (for audit trail)
   private final ThreadLocal<T> beforeState = new ThreadLocal<>();
@@ -52,7 +55,7 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
    * @param entityClass the entity class, must not be {@code null}
    */
   protected AbstractRepository(Class<T> entityClass) {
-    this(entityClass, CacheConfig.builder().enabled(false).build());
+    this(entityClass, CacheConfig.builder().enabled(false).build(), new NoEncryptionProvider());
   }
 
   /**
@@ -62,6 +65,17 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
    * @param cacheConfig the cache configuration
    */
   protected AbstractRepository(Class<T> entityClass, CacheConfig cacheConfig) {
+    this(entityClass, cacheConfig, new NoEncryptionProvider());
+  }
+
+  /**
+   * Constructs a new abstract repository with caching and encryption configuration.
+   *
+   * @param entityClass the entity class, must not be {@code null}
+   * @param cacheConfig the cache configuration
+   * @param encryptionProvider the encryption provider
+   */
+  protected AbstractRepository(Class<T> entityClass, CacheConfig cacheConfig, EncryptionProvider encryptionProvider) {
     if (entityClass == null) {
       throw new IllegalArgumentException("Entity class must not be null");
     }
@@ -71,6 +85,8 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     this.auditRepository = isAudited ? new InMemoryAuditRepository<>(entityClass) : null;
     this.cacheConfig = cacheConfig;
     this.cacheKeyGenerator = new CacheKeyGenerator(entityClass.getSimpleName());
+    this.encryptionProvider = encryptionProvider != null ? encryptionProvider : new NoEncryptionProvider();
+    this.hasEncryptedFields = EncryptionHelper.hasEncryptedFields(entityClass);
 
     // Initialize cache provider based on configuration
     if (cacheConfig.isEnabled()) {
@@ -159,10 +175,22 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
   public T save(T entity) {
     validateEntity(entity, "Entity to save");
     beforeSave(entity);
+
+    // Encrypt fields before saving if entity has encrypted fields
+    if (hasEncryptedFields) {
+      EncryptionHelper.encryptFields(entity, encryptionProvider);
+    }
+
     T saved = doSave(entity);
+
+    // Decrypt fields after saving for return value
+    if (hasEncryptedFields) {
+      EncryptionHelper.decryptFields(saved, encryptionProvider);
+    }
+
     afterSave(saved);
 
-    // Update cache after successful save
+    // Update cache after successful save (with decrypted version)
     if (cacheConfig.isEnabled() && saved.getId() != null) {
       String cacheKey = cacheKeyGenerator.generateKey(saved.getId());
       cacheProvider.put(cacheKey, saved);
@@ -193,12 +221,22 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
       String cacheKey = cacheKeyGenerator.generateKey(id);
       T cached = cacheProvider.computeIfAbsent(cacheKey, () -> {
         Optional<T> result = doFindById(id);
+        if (result.isPresent() && hasEncryptedFields) {
+          // Decrypt fields after fetching from database
+          EncryptionHelper.decryptFields(result.get(), encryptionProvider);
+        }
         return result.orElse(null);
       });
       return Optional.ofNullable(cached);
     }
 
-    return doFindById(id);
+    // Without caching
+    Optional<T> result = doFindById(id);
+    if (result.isPresent() && hasEncryptedFields) {
+      // Decrypt fields after fetching from database
+      EncryptionHelper.decryptFields(result.get(), encryptionProvider);
+    }
+    return result;
   }
 
   @Override
