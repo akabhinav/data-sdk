@@ -3,6 +3,8 @@ package io.dataverse.core;
 import io.dataverse.api.BatchOperations;
 import io.dataverse.api.Entity;
 import io.dataverse.api.Repository;
+import io.dataverse.core.audit.*;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,11 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
 
   protected final Class<T> entityClass;
   protected final ExecutorService virtualThreadExecutor;
+  protected final AuditRepository<T> auditRepository;
+  protected final boolean isAudited;
+
+  // ThreadLocal to store entity state before operations (for audit trail)
+  private final ThreadLocal<T> beforeState = new ThreadLocal<>();
 
   /**
    * Constructs a new abstract repository.
@@ -46,6 +53,8 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     }
     this.entityClass = entityClass;
     this.virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    this.isAudited = AuditHelper.isAudited(entityClass);
+    this.auditRepository = isAudited ? new InMemoryAuditRepository<>(entityClass) : null;
   }
 
   /**
@@ -184,6 +193,16 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     return new DefaultBatchOperations<>(this, virtualThreadExecutor);
   }
 
+  @Override
+  public AuditRepository<T> audit() {
+    if (!isAudited) {
+      throw new IllegalStateException(
+          "Entity " + entityClass.getSimpleName() + " is not annotated with @Audited. " +
+          "Add @Audited annotation to enable audit trail.");
+    }
+    return auditRepository;
+  }
+
   // Async Operations using Virtual Threads
 
   @Override
@@ -233,37 +252,104 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
   /**
    * Called before an entity is saved. Subclasses can override to add pre-save logic.
    *
+   * <p>This method handles audit trail by capturing the "before" state for UPDATE operations.
+   *
    * @param entity the entity being saved
    */
   protected void beforeSave(T entity) {
+    if (isAudited && entity.getId() != null) {
+      // Entity has an ID - this is an UPDATE operation
+      // Capture the "before" state for audit trail
+      Optional<T> existing = doFindById(entity.getId());
+      existing.ifPresent(beforeState::set);
+    }
     // Hook for subclasses
   }
 
   /**
    * Called after an entity is saved. Subclasses can override to add post-save logic.
    *
+   * <p>This method handles audit trail by creating audit entries for INSERT and UPDATE operations.
+   *
    * @param entity the saved entity
    */
   protected void afterSave(T entity) {
+    if (isAudited) {
+      Audited annotation = AuditHelper.getAuditedAnnotation(entityClass);
+      T before = beforeState.get();
+
+      if (before == null) {
+        // INSERT operation
+        if (AuditHelper.shouldAuditOperation(annotation, AuditOperation.INSERT)) {
+          AuditEntry<T> entry = AuditHelper.createInsertEntry(entity, getCurrentUser());
+          auditRepository.save(entry);
+        }
+      } else {
+        // UPDATE operation
+        if (AuditHelper.shouldAuditOperation(annotation, AuditOperation.UPDATE)) {
+          AuditEntry<T> entry = AuditHelper.createUpdateEntry(before, entity, getCurrentUser());
+          auditRepository.save(entry);
+        }
+        // Clean up ThreadLocal
+        beforeState.remove();
+      }
+    }
     // Hook for subclasses
   }
 
   /**
    * Called before an entity is deleted. Subclasses can override to add pre-delete logic.
    *
+   * <p>This method handles audit trail by capturing the entity state before deletion.
+   *
    * @param id the ID of the entity being deleted
    */
   protected void beforeDelete(ID id) {
+    if (isAudited) {
+      // Capture entity state before deletion for audit trail
+      Optional<T> existing = doFindById(id);
+      existing.ifPresent(beforeState::set);
+    }
     // Hook for subclasses
   }
 
   /**
    * Called after an entity is deleted. Subclasses can override to add post-delete logic.
    *
+   * <p>This method handles audit trail by creating audit entries for DELETE operations.
+   *
    * @param id the ID of the deleted entity
    */
   protected void afterDelete(ID id) {
+    if (isAudited) {
+      Audited annotation = AuditHelper.getAuditedAnnotation(entityClass);
+      if (AuditHelper.shouldAuditOperation(annotation, AuditOperation.DELETE)) {
+        T before = beforeState.get();
+        if (before != null) {
+          AuditEntry<T> entry = AuditHelper.createDeleteEntry(before, getCurrentUser());
+          auditRepository.save(entry);
+          beforeState.remove();
+        } else {
+          // Fallback if we couldn't capture the entity before deletion
+          AuditEntry<T> entry = AuditHelper.createDeleteEntryById(id, entityClass.getSimpleName(), getCurrentUser());
+          auditRepository.save(entry);
+        }
+      }
+    }
     // Hook for subclasses
+  }
+
+  /**
+   * Gets the current user/principal for audit trail.
+   *
+   * <p>Default implementation returns "system". Subclasses can override to integrate
+   * with security frameworks (Spring Security, etc.).
+   *
+   * @return the current user identifier
+   */
+  protected String getCurrentUser() {
+    // Default to "system" - subclasses can override to get from SecurityContext
+    return "system";
   }
 
   /**

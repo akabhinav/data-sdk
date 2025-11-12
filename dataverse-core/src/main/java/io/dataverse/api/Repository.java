@@ -1,5 +1,7 @@
 package io.dataverse.api;
 
+import io.dataverse.core.audit.AuditRepository;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
@@ -161,6 +163,31 @@ public interface Repository<T extends Entity<ID>, ID extends Serializable> {
    * @return a new aggregation builder instance, never {@code null}
    */
   AggregationBuilder<T> aggregate();
+
+  /**
+   * Returns the audit repository for querying audit trail entries.
+   *
+   * <p>Audit trail is only available for entities annotated with {@code @Audited}.
+   * If the entity is not audited, this method may return null or throw an exception.
+   *
+   * <p>Example usage:
+   * <pre>{@code
+   * // Query all changes to a specific product
+   * List<AuditEntry<Product>> history = repository.audit()
+   *     .forEntityId(productId)
+   *     .execute();
+   *
+   * // Query updates in the last 30 days
+   * List<AuditEntry<Product>> recentUpdates = repository.audit()
+   *     .forEntityType(Product.class)
+   *     .operation(AuditOperation.UPDATE)
+   *     .after(Instant.now().minus(30, ChronoUnit.DAYS))
+   *     .execute();
+   * }</pre>
+   *
+   * @return the audit repository, never {@code null}
+   */
+  AuditRepository<T> audit();
 
   /**
    * Executes the given native query.
