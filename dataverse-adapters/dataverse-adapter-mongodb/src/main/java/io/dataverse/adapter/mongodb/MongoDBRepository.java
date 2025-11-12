@@ -1,5 +1,6 @@
 package io.dataverse.adapter.mongodb;
 
+import io.dataverse.api.AggregationBuilder;
 import io.dataverse.api.Entity;
 import io.dataverse.api.QueryBuilder;
 import io.dataverse.core.AbstractRepository;
@@ -155,6 +156,13 @@ public class MongoDBRepository<T extends Entity<ID>, ID extends Serializable>
   @Override
   public QueryBuilder<T> query() {
     return new DefaultQueryBuilder<>(this::executeQuery);
+  }
+
+  @Override
+  public AggregationBuilder<T> aggregate() {
+    return connectionProvider.execute(db ->
+        new MongoDBAggregationBuilder<>(db, collectionName)
+    );
   }
 
   @Override
