@@ -17,12 +17,11 @@
     <name>DataVerse SDK - Examples</name>
     <description>Example applications demonstrating DataVerse SDK usage</description>
 
-    <!-- Future modules:
     <modules>
         <module>example-basic</module>
+        <!-- Future modules:
         <module>example-multi-source</module>
         <module>example-spring-boot</module>
         <module>example-standalone</module>
-    </modules>
-    -->
+        -->
 </project>
