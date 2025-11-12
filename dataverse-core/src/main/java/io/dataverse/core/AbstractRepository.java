@@ -4,6 +4,7 @@ import io.dataverse.api.BatchOperations;
 import io.dataverse.api.Entity;
 import io.dataverse.api.Repository;
 import io.dataverse.core.audit.*;
+import io.dataverse.core.cache.*;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -38,16 +39,29 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
   protected final ExecutorService virtualThreadExecutor;
   protected final AuditRepository<T> auditRepository;
   protected final boolean isAudited;
+  protected final CacheProvider<String, T> cacheProvider;
+  protected final CacheKeyGenerator cacheKeyGenerator;
+  protected final CacheConfig cacheConfig;
 
   // ThreadLocal to store entity state before operations (for audit trail)
   private final ThreadLocal<T> beforeState = new ThreadLocal<>();
 
   /**
-   * Constructs a new abstract repository.
+   * Constructs a new abstract repository with default caching disabled.
    *
    * @param entityClass the entity class, must not be {@code null}
    */
   protected AbstractRepository(Class<T> entityClass) {
+    this(entityClass, CacheConfig.builder().enabled(false).build());
+  }
+
+  /**
+   * Constructs a new abstract repository with caching configuration.
+   *
+   * @param entityClass the entity class, must not be {@code null}
+   * @param cacheConfig the cache configuration
+   */
+  protected AbstractRepository(Class<T> entityClass, CacheConfig cacheConfig) {
     if (entityClass == null) {
       throw new IllegalArgumentException("Entity class must not be null");
     }
@@ -55,6 +69,40 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     this.virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
     this.isAudited = AuditHelper.isAudited(entityClass);
     this.auditRepository = isAudited ? new InMemoryAuditRepository<>(entityClass) : null;
+    this.cacheConfig = cacheConfig;
+    this.cacheKeyGenerator = new CacheKeyGenerator(entityClass.getSimpleName());
+
+    // Initialize cache provider based on configuration
+    if (cacheConfig.isEnabled()) {
+      CacheProvider<String, T> l1 = cacheConfig.isL1Enabled()
+          ? new InMemoryCacheProvider<>(entityClass.getSimpleName() + "-L1", cacheConfig)
+          : new NoCacheProvider<>();
+
+      CacheProvider<String, T> l2 = cacheConfig.isL2Enabled()
+          ? createL2CacheProvider(cacheConfig)
+          : new NoCacheProvider<>();
+
+      this.cacheProvider = new MultiLevelCacheProvider<>(
+          entityClass.getSimpleName() + "-Cache",
+          l1,
+          l2
+      );
+    } else {
+      this.cacheProvider = new NoCacheProvider<>();
+    }
+  }
+
+  /**
+   * Creates an L2 (distributed) cache provider.
+   * Subclasses can override to provide custom L2 cache implementations (e.g., Redis).
+   *
+   * @param config the cache configuration
+   * @return the L2 cache provider
+   */
+  protected CacheProvider<String, T> createL2CacheProvider(CacheConfig config) {
+    // Default: no L2 cache
+    // Subclasses can override to integrate with Redis, Memcached, etc.
+    return new NoCacheProvider<>();
   }
 
   /**
@@ -113,6 +161,13 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     beforeSave(entity);
     T saved = doSave(entity);
     afterSave(saved);
+
+    // Update cache after successful save
+    if (cacheConfig.isEnabled() && saved.getId() != null) {
+      String cacheKey = cacheKeyGenerator.generateKey(saved.getId());
+      cacheProvider.put(cacheKey, saved);
+    }
+
     return saved;
   }
 
@@ -132,6 +187,17 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
   @Override
   public Optional<T> findById(ID id) {
     validateId(id);
+
+    // Use cache-aside pattern if caching is enabled
+    if (cacheConfig.isEnabled()) {
+      String cacheKey = cacheKeyGenerator.generateKey(id);
+      T cached = cacheProvider.computeIfAbsent(cacheKey, () -> {
+        Optional<T> result = doFindById(id);
+        return result.orElse(null);
+      });
+      return Optional.ofNullable(cached);
+    }
+
     return doFindById(id);
   }
 
@@ -169,6 +235,12 @@ public abstract class AbstractRepository<T extends Entity<ID>, ID extends Serial
     beforeDelete(id);
     doDelete(id);
     afterDelete(id);
+
+    // Evict from cache after successful delete
+    if (cacheConfig.isEnabled()) {
+      String cacheKey = cacheKeyGenerator.generateKey(id);
+      cacheProvider.evict(cacheKey);
+    }
   }
 
   @Override
