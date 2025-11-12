@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.dataverse</groupId>
+        <artifactId>dataverse-sdk</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>dataverse-bom</artifactId>
+    <packaging>pom</packaging>
+
+    <name>DataVerse SDK - Bill of Materials</name>
+    <description>Bill of Materials for DataVerse SDK modules</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Core Module -->
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Adapter Modules -->
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-adapter-dynamodb</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-adapter-redis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-adapter-mongodb</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-adapter-cassandra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-adapter-postgresql</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-adapter-elasticsearch</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Cache Modules -->
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-cache-caffeine</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-cache-redis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Metrics Modules -->
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-metrics-micrometer</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-metrics-prometheus</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Spring Boot Modules -->
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-spring-boot-autoconfigure</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Test Support -->
+            <dependency>
+                <groupId>io.dataverse</groupId>
+                <artifactId>dataverse-test-support</artifactId>
+                <version>${project.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
