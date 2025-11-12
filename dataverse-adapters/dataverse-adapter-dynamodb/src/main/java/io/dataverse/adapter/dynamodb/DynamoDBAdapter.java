@@ -99,6 +99,13 @@ public class DynamoDBAdapter implements DataSourceAdapter {
   }
 
   @Override
+  public io.dataverse.api.TransactionManager getTransactionManager() {
+    // TODO: Implement DynamoDB TransactWriteItems support
+    // DynamoDB supports ACID transactions via TransactWriteItems/TransactGetItems
+    return null;
+  }
+
+  @Override
   public boolean isHealthy() {
     try {
       dynamoDbClient.listTables();

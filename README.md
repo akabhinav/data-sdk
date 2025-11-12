@@ -99,13 +99,162 @@ List<User> activeUsers = userRepo.query()
 CompletableFuture<User> futureUser = userRepo.saveAsync(user);
 ```
 
+## 🎨 Phase 4: Enterprise Features
+
+### Batch Operations
+
+Efficiently process large datasets with bulk operations and detailed result tracking:
+
+```java
+BatchOperations<User, String> batch = userRepo.batch();
+
+// Upsert (insert or update)
+List<User> users = List.of(user1, user2, user3);
+BatchResult<User> result = batch.upsertAll(users);
+
+System.out.println("Inserted: " + result.getInsertedCount());
+System.out.println("Updated: " + result.getUpdatedCount());
+System.out.println("Failed: " + result.getFailureCount());
+
+// Bulk update with transformation
+batch.updateAll(users, user -> {
+    user.setActive(true);
+    user.setLastModified(Instant.now());
+    return user;
+});
+
+// Async batch operations
+CompletableFuture<BatchResult<User>> futureResult = batch.upsertAllAsync(users);
+```
+
+### JSON Serialization
+
+Pluggable serialization with Jackson support out-of-the-box:
+
+```java
+// Add serialization module
+<dependency>
+    <groupId>io.dataverse</groupId>
+    <artifactId>dataverse-serialization-jackson</artifactId>
+</dependency>
+
+// Use serialization
+SerializationProvider serializer = new JacksonSerializationProvider();
+
+// Serialize to JSON
+String json = serializer.serialize(user);
+
+// Deserialize from JSON
+User user = serializer.deserialize(json, User.class);
+
+// Convert to/from Map (useful for DynamoDB, MongoDB)
+Map<String, Object> map = serializer.toMap(user);
+User fromMap = serializer.fromMap(map, User.class);
+
+// Deep clone
+User clone = serializer.clone(user);
+```
+
+### Entity Mapping
+
+Type-safe entity-to-DTO mapping:
+
+```java
+// Define DTO
+record UserDTO(String id, String fullName, String contact) {}
+
+// Create mapper
+EntityMapper<User, UserDTO> mapper = EntityMapper.of(
+    user -> new UserDTO(user.getId(), user.getName(), user.getEmail()),
+    dto -> {
+        User user = new User();
+        user.setId(dto.id());
+        user.setName(dto.fullName());
+        user.setEmail(dto.contact());
+        return user;
+    }
+);
+
+// Map entities
+UserDTO dto = mapper.toDto(user);
+List<UserDTO> dtos = mapper.toDtoList(users);
+```
+
+### Advanced Querying
+
+Pagination, projection, and aggregations:
+
+```java
+// Pagination
+List<User> page = userRepo.query()
+    .where("status").eq("ACTIVE")
+    .page(0, 20)  // Page 0, size 20
+    .execute();
+
+// Projection (select specific fields)
+List<User> projected = userRepo.query()
+    .where("age").greaterThan(25)
+    .select("id", "name", "email")
+    .execute();
+
+// Distinct results
+List<User> distinct = userRepo.query()
+    .distinct()
+    .execute();
+
+// Count aggregation
+long count = userRepo.query()
+    .where("active").isTrue()
+    .count();
+
+// Check existence
+boolean exists = userRepo.query()
+    .where("email").eq("john@example.com")
+    .exists();
+```
+
+### Transaction Support
+
+ACID transactions with configurable isolation levels:
+
+```java
+TransactionManager txManager = adapter.getTransactionManager();
+
+// Automatic transaction management
+txManager.executeInTransaction(repo -> {
+    User user = repo.findById("123").orElseThrow();
+    user.setBalance(user.getBalance() - 100);
+    repo.save(user);
+});
+
+// Manual transaction control
+Transaction tx = txManager.begin(IsolationLevel.REPEATABLE_READ);
+try {
+    User user = userRepo.findById("123").orElseThrow();
+    user.setBalance(user.getBalance() + 100);
+    userRepo.save(user);
+
+    tx.commit();
+} catch (Exception e) {
+    tx.rollback();
+    throw e;
+}
+
+// Savepoints for partial rollback
+Transaction tx = txManager.begin();
+Savepoint sp1 = tx.createSavepoint("checkpoint1");
+// ... operations ...
+tx.rollbackTo(sp1);  // Rollback to checkpoint
+tx.commit();
+```
+
 ## 📦 Supported Data Sources
 
 | Data Source | Adapter Module | Status | Type |
 |-------------|----------------|--------|------|
-| **Amazon DynamoDB** | `dataverse-adapter-dynamodb` | ✅ In Progress | NoSQL |
-| **MongoDB** | `dataverse-adapter-mongodb` | 🔄 Planned | NoSQL |
-| **Redis** | `dataverse-adapter-redis` | 🔄 Planned | Cache |
+| **Amazon DynamoDB** | `dataverse-adapter-dynamodb` | ✅ Complete | NoSQL |
+| **MongoDB** | `dataverse-adapter-mongodb` | ✅ Complete | NoSQL |
+| **Redis** | `dataverse-adapter-redis` | ✅ Complete | Cache |
 | **PostgreSQL** | `dataverse-adapter-postgresql` | 🔄 Planned | SQL |
 | **Cassandra** | `dataverse-adapter-cassandra` | 🔄 Planned | NoSQL |
 | **Elasticsearch** | `dataverse-adapter-elasticsearch` | 🔄 Planned | Search |

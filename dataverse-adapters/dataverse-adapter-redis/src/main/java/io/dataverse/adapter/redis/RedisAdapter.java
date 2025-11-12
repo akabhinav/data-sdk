@@ -101,6 +101,13 @@ public class RedisAdapter implements DataSourceAdapter {
   }
 
   @Override
+  public io.dataverse.api.TransactionManager getTransactionManager() {
+    // TODO: Implement Redis MULTI/EXEC transaction support
+    // Redis supports optimistic locking via WATCH/MULTI/EXEC
+    return null;
+  }
+
+  @Override
   public boolean isHealthy() {
     try (var jedis = jedisPool.getResource()) {
       return "PONG".equals(jedis.ping());

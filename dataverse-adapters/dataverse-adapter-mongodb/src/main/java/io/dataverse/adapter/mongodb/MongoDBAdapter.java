@@ -100,6 +100,13 @@ public class MongoDBAdapter implements DataSourceAdapter {
   }
 
   @Override
+  public io.dataverse.api.TransactionManager getTransactionManager() {
+    // TODO: Implement MongoDB multi-document transaction support
+    // MongoDB 4.0+ supports ACID transactions via ClientSession
+    return null;
+  }
+
+  @Override
   public boolean isHealthy() {
     try {
       mongoClient.getDatabase(databaseName).listCollectionNames().first();
