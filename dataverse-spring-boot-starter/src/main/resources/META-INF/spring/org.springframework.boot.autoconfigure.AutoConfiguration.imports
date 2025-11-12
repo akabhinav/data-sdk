@@ -1,0 +1,4 @@
+io.dataverse.spring.boot.autoconfigure.DynamoDBAutoConfiguration
+io.dataverse.spring.boot.autoconfigure.MongoDBAutoConfiguration
+io.dataverse.spring.boot.autoconfigure.RedisAutoConfiguration
+io.dataverse.spring.boot.autoconfigure.DataVerseHealthIndicatorAutoConfiguration

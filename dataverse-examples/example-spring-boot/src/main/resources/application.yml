@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: dataverse-spring-boot-example
+
+server:
+  port: 8080
+
+# DataVerse SDK Configuration
+dataverse:
+  adapters:
+    # DynamoDB Adapter (Primary Store)
+    dynamodb:
+      enabled: true
+      properties:
+        region: us-east-1
+        endpoint: http://localhost:8000  # DynamoDB Local
+
+    # MongoDB Adapter (Analytics Store)
+    mongodb:
+      enabled: true
+      properties:
+        connectionString: mongodb://localhost:27017
+        database: dataverse-springboot
+
+    # Redis Adapter (Cache Layer)
+    redis:
+      enabled: true
+      properties:
+        host: localhost
+        port: 6379
+        maxConnections: 20
+
+# Spring Boot Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  health:
+    dataverse:
+      enabled: true
+
+# Logging
+logging:
+  level:
+    io.dataverse: DEBUG
+    io.dataverse.example.springboot: INFO
+    org.springframework.boot: INFO
