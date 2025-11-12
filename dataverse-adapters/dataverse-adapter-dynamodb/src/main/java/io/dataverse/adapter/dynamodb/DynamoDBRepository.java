@@ -1,5 +1,6 @@
 package io.dataverse.adapter.dynamodb;
 
+import io.dataverse.api.BatchOperations;
 import io.dataverse.api.Entity;
 import io.dataverse.api.QueryBuilder;
 import io.dataverse.core.AbstractRepository;
@@ -164,6 +165,20 @@ public class DynamoDBRepository<T extends Entity<ID>, ID extends Serializable>
   }
 
   @Override
+  public BatchOperations<T, ID> batch() {
+    // Return optimized DynamoDB batch operations
+    DynamoDbClient client = connectionProvider.execute(c -> c);
+    return new DynamoDBBatchOperations<>(
+        this,
+        client,
+        tableName,
+        entityClass,
+        virtualThreadExecutor,
+        this
+    );
+  }
+
+  @Override
   public List<T> executeNativeQuery(String nativeQuery) {
     // Native DynamoDB queries would be executed here
     throw new UnsupportedOperationException("Native queries not yet implemented for DynamoDB");
@@ -197,10 +212,12 @@ public class DynamoDBRepository<T extends Entity<ID>, ID extends Serializable>
   /**
    * Converts an entity to a DynamoDB attribute map.
    *
+   * <p>Package-private to allow access from DynamoDBBatchOperations.
+   *
    * @param entity the entity
    * @return the attribute map
    */
-  protected java.util.Map<String, AttributeValue> convertToAttributeMap(T entity) {
+  java.util.Map<String, AttributeValue> convertToAttributeMap(T entity) {
     // Simplified: In production, use reflection or Jackson for proper conversion
     var map = new java.util.HashMap<String, AttributeValue>();
 
@@ -217,10 +234,12 @@ public class DynamoDBRepository<T extends Entity<ID>, ID extends Serializable>
   /**
    * Converts a DynamoDB attribute map to an entity.
    *
+   * <p>Package-private to allow access from DynamoDBBatchOperations.
+   *
    * @param attributeMap the attribute map
    * @return the entity
    */
-  protected T convertFromAttributeMap(java.util.Map<String, AttributeValue> attributeMap) {
+  T convertFromAttributeMap(java.util.Map<String, AttributeValue> attributeMap) {
     // Simplified: In production, use proper deserialization
     try {
       T instance = entityClass.getDeclaredConstructor().newInstance();
